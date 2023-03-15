@@ -1,4 +1,4 @@
-use chrono::{Datelike, Timelike};
+use chrono::{Datelike, Timelike, DateTime, TimeZone};
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 
@@ -42,6 +42,11 @@ fn create_folder(fp: &str) -> std::io::Result<()> {
     }
 }
 
+// fn get_time<Tz: TimeZone>(date: DateTime<Tz>, date_str: &mut String){
+//     let tmp_date = format!("{:02}:{:02}:{:02}.{:02}",date.time().hour(),date.time().minute(),date.time().second(),date.time().nanosecond()/1000000).as_str();
+//     date_str = &mut tmp_date.to_string();
+// }
+
 fn main() -> std::io::Result<()> {
     if OperationSystem != "linux"{
         panic!("System is not Linux!");
@@ -49,21 +54,31 @@ fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let serial_path: &String;
     let baud_rate;
+    let mut log_timestamp = true;
     match args.len() {
-        0 => panic!("Unmöglich"),
-        1 | 2 => panic!("Zu wenige Parameter!"),
-        3 => {
+        0=> panic!("impossible"),
+        1 => {
+            println!("Usage: serial_logger <PATH TO SERIAL DEV> <BAUDRATE> (optional: <LOG WITH TIMESTAMP (default: true)>)");
+            return Ok(());
+        }
+        3|4 => {
             serial_path = &args[1];
             baud_rate = args[2].parse::<u32>().unwrap();
+            if args.len() == 4{
+                log_timestamp = args[3].parse::<bool>().unwrap();
+            }
         }
-        _ => panic!("Zu viele Parameter"),
+        2|_ => panic!("Too less parameters"),
     }
     let binding = home::home_dir().unwrap();
     let home_path = binding.as_os_str().to_str().unwrap();
+    let get_time = |date: DateTime<chrono::Local>| ->String{
+        format!("{:02}:{:02}:{:02}.{:03}\t",date.time().hour(),date.time().minute(),date.time().second(),date.time().nanosecond()/1000000)
+    };
+
 
     let date = chrono::offset::Local::now();
     let hour_minute = format!("{:02}{:02}", date.time().hour(), date.time().minute());
-
     let fp = format!(
         "{}/log_files/{:04}/{:04}-{:02}/{:04}-{:02}-{:02}",
         home_path,
@@ -99,6 +114,9 @@ fn main() -> std::io::Result<()> {
                     let res = port.read_line(&mut line_buffer);
                     if let Ok(_) = res {
                         print!("{}", line_buffer);
+                        if log_timestamp {
+                            file.write(get_time(chrono::offset::Local::now()).as_bytes())?;
+                        }
                         if line_buffer.as_bytes()[0] == 0x0D{
                             file.write(line_buffer[1..].as_bytes())?;   // delete the first byte. It contains a line feed. We don't need that on linux
                         } else if line_buffer.as_bytes()[0] != 0x00 {
