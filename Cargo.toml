@@ -1,7 +1,10 @@
 [package]
 name = "serial_logger"
+description = "A logger for serial port written in rust. It writes a logfile with the current date and prints the serial output."
+license = "MIT"
 version = "0.1.0"
 edition = "2021"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
