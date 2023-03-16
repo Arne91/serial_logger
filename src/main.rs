@@ -1,4 +1,4 @@
-use chrono::{Datelike, Timelike, DateTime, TimeZone};
+use chrono::{Datelike, Timelike, DateTime};
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 
@@ -102,7 +102,7 @@ fn main() -> std::io::Result<()> {
 
     loop {
         let port = serialport::new(serial_path, baud_rate)
-            .timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(10000))
             .open();
         match port {
             Ok(port) => {
