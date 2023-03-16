@@ -100,6 +100,12 @@ fn main() -> std::io::Result<()> {
         file.write(file_header.as_bytes())?;
     }
 
+    let is_readable = |x| -> bool {
+        match x {
+            0x0A|0x20..=0x7E => true,
+            _ => false,
+        }
+    };
     loop {
         let port = serialport::new(serial_path, baud_rate)
             .timeout(Duration::from_secs(10000))
@@ -117,11 +123,14 @@ fn main() -> std::io::Result<()> {
                         if log_timestamp {
                             file.write(get_time(chrono::offset::Local::now()).as_bytes())?;
                         }
-                        if line_buffer.as_bytes()[0] == 0x0D{
-                            file.write(line_buffer[1..].as_bytes())?;   // delete the first byte. It contains a line feed. We don't need that on linux
-                        } else if line_buffer.as_bytes()[0] != 0x00 {
-                            file.write(line_buffer.as_bytes())?;
+                        
+                        let mut write_arr = Vec::new();
+                        for ch in line_buffer.as_bytes(){
+                            if is_readable(*ch){
+                                write_arr.push(*ch);
+                            }
                         }
+                        file.write(&write_arr)?;
                     } else {
                         // when there was a timeout, because nothing came on the serial port:
                         // goto the outer loop and open a new port to listen to.
