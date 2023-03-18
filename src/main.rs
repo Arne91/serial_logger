@@ -58,20 +58,29 @@ fn main() -> std::io::Result<()> {
     match args.len() {
         0=> panic!("impossible"),
         1 => {
-            println!("Usage: serial_logger <PATH TO SERIAL DEV> <BAUDRATE> (optional: <LOG WITH TIMESTAMP (default: true)>)");
+            println!("Usage: serial_logger <PATH TO SERIAL DEV> <BAUDRATE> (optional: <LOG WITH TIMESTAMP (default: true)> <OUTPUT_PATH> (default: home directory of user))");
             return Ok(());
         }
-        3|4 => {
+        3 | 4 | 5 => {
             serial_path = &args[1];
             baud_rate = args[2].parse::<u32>().unwrap();
-            if args.len() == 4{
+            if args.len() > 3 {
                 log_timestamp = args[3].parse::<bool>().unwrap();
             }
         }
         2|_ => panic!("Too less parameters"),
     }
+    
     let binding = home::home_dir().unwrap();
-    let home_path = binding.as_os_str().to_str().unwrap();
+    let home_path: &str;
+
+    if args.len() > 4 {
+        home_path = &args[4].as_str();
+    }
+    else {
+        home_path = binding.as_os_str().to_str().unwrap();
+    }
+    
     let get_time = |date: DateTime<chrono::Local>| ->String{
         format!("{:02}:{:02}:{:02}.{:03}\t",date.time().hour(),date.time().minute(),date.time().second(),date.time().nanosecond()/1000000)
     };
