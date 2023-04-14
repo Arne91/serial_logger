@@ -1,4 +1,4 @@
-use chrono::{Datelike, Timelike, DateTime};
+use chrono::{DateTime, Datelike, Timelike};
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 
@@ -6,7 +6,7 @@ use std::time::Duration;
 use std::{env, env::consts::OS as OperationSystem, fs};
 
 /// create the file if it doesn't exist.
-/// 
+///
 /// If the file doesn't exist, the file is created. Additionally it gives a boolean back with true.
 /// If the file is created, the boolean is true. If it is not created, it returns a false.
 /// It also returns the file descriptor.
@@ -14,22 +14,28 @@ fn create_file(fp: &str) -> (File, bool) {
     let b = std::path::Path::new(fp).exists();
 
     if b == true {
-        (OpenOptions::new()
-            .append(true)
-            .write(true)
-            .open(fp)
-            .unwrap(), false)
+        (
+            OpenOptions::new()
+                .append(true)
+                .write(true)
+                .open(fp)
+                .unwrap(),
+            false,
+        )
     } else {
-        (OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(fp)
-            .unwrap(), true)
+        (
+            OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(fp)
+                .unwrap(),
+            true,
+        )
     }
 }
 
 /// create the folder if it doesn't exist.
-/// 
+///
 /// If the folder doesn't exist, the folder will be created.
 fn create_folder(fp: &str) -> std::io::Result<()> {
     let b = std::path::Path::new(fp).exists();
@@ -48,7 +54,7 @@ fn create_folder(fp: &str) -> std::io::Result<()> {
 // }
 
 fn main() -> std::io::Result<()> {
-    if OperationSystem != "linux"{
+    if OperationSystem != "linux" {
         panic!("System is not Linux!");
     }
     let args: Vec<String> = env::args().collect();
@@ -56,7 +62,7 @@ fn main() -> std::io::Result<()> {
     let baud_rate;
     let mut log_timestamp = true;
     match args.len() {
-        0=> panic!("impossible"),
+        0 => panic!("impossible"),
         1 => {
             println!("Usage: serial_logger <PATH TO SERIAL DEV> <BAUDRATE> (optional: <LOG WITH TIMESTAMP (default: true)> <OUTPUT_PATH> (default: home directory of user))");
             return Ok(());
@@ -68,23 +74,27 @@ fn main() -> std::io::Result<()> {
                 log_timestamp = args[3].parse::<bool>().unwrap();
             }
         }
-        2|_ => panic!("Too less parameters"),
+        2 | _ => panic!("Too less parameters"),
     }
-    
+
     let binding = home::home_dir().unwrap();
     let home_path: &str;
 
     if args.len() > 4 {
         home_path = &args[4].as_str();
-    }
-    else {
+    } else {
         home_path = binding.as_os_str().to_str().unwrap();
     }
-    
-    let get_time = |date: DateTime<chrono::Local>| ->String{
-        format!("{:02}:{:02}:{:02}.{:03}\t",date.time().hour(),date.time().minute(),date.time().second(),date.time().nanosecond()/1000000)
-    };
 
+    let get_time = |date: DateTime<chrono::Local>| -> String {
+        format!(
+            "{:02}:{:02}:{:02}.{:03}\t",
+            date.time().hour(),
+            date.time().minute(),
+            date.time().second(),
+            date.time().nanosecond() / 1000000
+        )
+    };
 
     let date = chrono::offset::Local::now();
     let hour_minute = format!("{:02}{:02}", date.time().hour(), date.time().minute());
@@ -103,18 +113,13 @@ fn main() -> std::io::Result<()> {
     println!("Log to --> {}", file_name);
     let (mut file, is_created) = create_file(&file_name);
     let file_header = format!("{}\n", date.to_rfc2822());
-    
+
     // only if the file is created, the file header should be written
-    if is_created{
+    if is_created {
         file.write(file_header.as_bytes())?;
     }
 
-    let is_readable = |x| -> bool {
-        match x {
-            0x0A|0x20..=0x7E => true,
-            _ => false,
-        }
-    };
+    let is_readable = |x| -> bool { matches!(x, 0x0A | 0x20..=0x7E) };
     loop {
         let port = serialport::new(serial_path, baud_rate)
             .timeout(Duration::from_secs(10000))
@@ -132,10 +137,10 @@ fn main() -> std::io::Result<()> {
                         if log_timestamp {
                             file.write(get_time(chrono::offset::Local::now()).as_bytes())?;
                         }
-                        
+
                         let mut write_arr = Vec::new();
-                        for ch in line_buffer.as_bytes(){
-                            if is_readable(*ch){
+                        for ch in line_buffer.as_bytes() {
+                            if is_readable(*ch) {
                                 write_arr.push(*ch);
                             }
                         }
