@@ -13,7 +13,7 @@ use std::{env, env::consts::OS as OperationSystem, fs};
 fn create_file(fp: &str) -> (File, bool) {
     let b = std::path::Path::new(fp).exists();
 
-    if b == true {
+    if b {
         (
             OpenOptions::new()
                 .append(true)
@@ -40,7 +40,7 @@ fn create_file(fp: &str) -> (File, bool) {
 fn create_folder(fp: &str) -> std::io::Result<()> {
     let b = std::path::Path::new(fp).exists();
 
-    if b == true {
+    if b {
         Ok(())
     } else {
         fs::create_dir_all(fp)?;
@@ -74,17 +74,15 @@ fn main() -> std::io::Result<()> {
                 log_timestamp = args[3].parse::<bool>().unwrap();
             }
         }
-        2 | _ => panic!("Too less parameters"),
+        _ => panic!("Too less parameters"),
     }
 
     let binding = home::home_dir().unwrap();
-    let home_path: &str;
-
-    if args.len() > 4 {
-        home_path = &args[4].as_str();
+    let home_path: &str = if args.len() > 4 {
+        args[4].as_str()
     } else {
-        home_path = binding.as_os_str().to_str().unwrap();
-    }
+        binding.as_os_str().to_str().unwrap()
+    };
 
     let get_time = |date: DateTime<chrono::Local>| -> String {
         format!(
@@ -116,7 +114,7 @@ fn main() -> std::io::Result<()> {
 
     // only if the file is created, the file header should be written
     if is_created {
-        file.write(file_header.as_bytes())?;
+        file.write_all(file_header.as_bytes())?;
     }
 
     let is_readable = |x| -> bool { matches!(x, 0x0A | 0x20..=0x7E) };
@@ -132,10 +130,10 @@ fn main() -> std::io::Result<()> {
                 'inner: loop {
                     line_buffer.clear();
                     let res = port.read_line(&mut line_buffer);
-                    if let Ok(_) = res {
+                    if res.is_ok() {
                         print!("{}", line_buffer);
                         if log_timestamp {
-                            file.write(get_time(chrono::offset::Local::now()).as_bytes())?;
+                            file.write_all(get_time(chrono::offset::Local::now()).as_bytes())?;
                         }
 
                         let mut write_arr = Vec::new();
@@ -144,7 +142,7 @@ fn main() -> std::io::Result<()> {
                                 write_arr.push(*ch);
                             }
                         }
-                        file.write(&write_arr)?;
+                        file.write_all(&write_arr)?;
                     } else {
                         // when there was a timeout, because nothing came on the serial port:
                         // goto the outer loop and open a new port to listen to.
